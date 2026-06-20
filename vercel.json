@@ -2,8 +2,8 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/anilist/(.*)",
-      "destination": "/api/index"
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
   ]
 }

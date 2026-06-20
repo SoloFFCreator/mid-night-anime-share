@@ -20,7 +20,7 @@ query ($id: Int) {
   }
 }`;
 
-// Root route helper (just in case someone visits the bare domain)
+// Root route helper
 app.get('/', (req, res) => {
     res.redirect(FIREBASE_APP_URL);
 });
@@ -31,7 +31,7 @@ app.get('/anilist/:id/EP/:epId', async (req, res) => {
     const epId = req.params.epId;
 
     // Fallback values if AniList is down or id is invalid
-    let title = `Watch Anime Online - Episode ${epId}`;
+    let animeTitle = "Awesome Anime";
     let imageUrl = "https://anilist.co/img/icons/icon.png"; 
     let description = "Stream your favorite anime episodes in high definition on Mid Night Anime.";
 
@@ -53,7 +53,7 @@ app.get('/anilist/:id/EP/:epId', async (req, res) => {
                 const jsonResult = await apiResponse.json();
                 if (jsonResult.data && jsonResult.data.Media) {
                     const media = jsonResult.data.Media;
-                    title = `${media.title.userPreferred || media.title.english || 'Anime'} - Episode ${epId}`;
+                    animeTitle = media.title.userPreferred || media.title.english || 'Anime';
                     imageUrl = media.coverImage.extraLarge || media.coverImage.large;
                     
                     if (media.description) {
@@ -68,8 +68,11 @@ app.get('/anilist/:id/EP/:epId', async (req, res) => {
         }
     }
 
-    // Generate the destination link for the actual viewer
-    const finalRedirectDestination = `${FIREBASE_APP_URL}/watch?id=${animeId}&ep=${epId}`;
+    // NEW FORMAT: Redirects strictly to https://mid-night-anime.web.app/?a=ID&ep=EP
+    const finalRedirectDestination = `${FIREBASE_APP_URL}/?a=${animeId}&ep=${epId}`;
+    
+    // NEW METADATA FORMAT: "Check Out Re:ZERO -Starting Life in Another World- Season 4 E1 on Midnight Anime!"
+    const formattedShareTitle = `Check Out ${animeTitle} E${epId} on Midnight Anime!`;
 
     // Optimize headers for social media scrapers
     res.setHeader('Cache-Control', 's-maxage=1200, stale-while-revalidate=600');
@@ -82,12 +85,12 @@ app.get('/anilist/:id/EP/:epId', async (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${title}</title>
+            <title>${formattedShareTitle}</title>
             <meta name="description" content="${description}">
 
             <meta property="og:type" content="video.other">
-            <meta property="og:site_name" content="Mid Night Anime">
-            <meta property="og:title" content="${title}">
+            <meta property="og:site_name" content="Midnight Anime">
+            <meta property="og:title" content="${formattedShareTitle}">
             <meta property="og:description" content="${description}">
             <meta property="og:image" content="${imageUrl}">
             <meta property="og:image:secure_url" content="${imageUrl}">

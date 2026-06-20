@@ -1,0 +1,12 @@
+{
+  "name": "mid-night-anime-metadata-api",
+  "version": "1.0.0",
+  "description": "Dynamic metadata generation engine for WhatsApp card shares",
+  "main": "api/index.js",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

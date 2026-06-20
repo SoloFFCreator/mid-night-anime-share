@@ -20,65 +20,64 @@ query ($id: Int) {
   }
 }`;
 
-// Root route helper
-app.get('/', (req, res) => {
-    res.redirect(FIREBASE_APP_URL);
-});
+// Main route matching the root path: /?a=ID&ep=NUM
+app.get('/', async (req, res) => {
+    // Extracting query parameters (?a=189046&ep=1)
+    const animeId = parseInt(req.query.a, 10);
+    const epId = req.query.ep;
 
-// Dynamic route matching: /anilist/:id/EP/:epId
-app.get('/anilist/:id/EP/:epId', async (req, res) => {
-    const animeId = parseInt(req.params.id, 10);
-    const epId = req.params.epId;
-
-    // Fallback values if AniList is down or id is invalid
-    let animeTitle = "Awesome Anime";
-    let imageUrl = "https://anilist.co/img/icons/icon.png"; 
-    let description = "Stream your favorite anime episodes in high definition on Mid Night Anime.";
-
-    if (!isNaN(animeId)) {
-        try {
-            const apiResponse = await fetch(ANILIST_GRAPHQL_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    query: ANILIST_QUERY,
-                    variables: { id: animeId }
-                })
-            });
-
-            if (apiResponse.ok) {
-                const jsonResult = await apiResponse.json();
-                if (jsonResult.data && jsonResult.data.Media) {
-                    const media = jsonResult.data.Media;
-                    animeTitle = media.title.userPreferred || media.title.english || 'Anime';
-                    imageUrl = media.coverImage.extraLarge || media.coverImage.large;
-                    
-                    if (media.description) {
-                        description = media.description
-                            .replace(/<\/?[^>]+(>|$)/g, "")
-                            .substring(0, 160) + "...";
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("AniList API Handshake Failed:", error);
-        }
+    // Fallback if no parameters are provided (e.g., direct visit to the bare Vercel domain)
+    if (isNaN(animeId) || !epId) {
+        return res.redirect(FIREBASE_APP_URL);
     }
 
-    // NEW FORMAT: Redirects strictly to https://mid-night-anime.web.app/?a=ID&ep=EP
+    // Default fallback metadata values
+    let animeTitle = "Awesome Anime";
+    let imageUrl = "https://anilist.co/img/icons/icon.png"; 
+    let description = "Stream your favorite anime episodes in high definition on Midnight Anime.";
+
+    try {
+        const apiResponse = await fetch(ANILIST_GRAPHQL_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                query: ANILIST_QUERY,
+                variables: { id: animeId }
+            })
+        });
+
+        if (apiResponse.ok) {
+            const jsonResult = await apiResponse.json();
+            if (jsonResult.data && jsonResult.data.Media) {
+                const media = jsonResult.data.Media;
+                animeTitle = media.title.userPreferred || media.title.english || 'Anime';
+                imageUrl = media.coverImage.extraLarge || media.coverImage.large;
+                
+                if (media.description) {
+                    description = media.description
+                        .replace(/<\/?[?]+(>|$)/g, "") // Strip HTML tags
+                        .substring(0, 160) + "...";
+                }
+            }
+        }
+    } catch (error) {
+        console.error("AniList API Handshake Failed:", error);
+    }
+
+    // Destination URL on your Firebase streaming site
     const finalRedirectDestination = `${FIREBASE_APP_URL}/?a=${animeId}&ep=${epId}`;
     
-    // NEW METADATA FORMAT: "Check Out Re:ZERO -Starting Life in Another World- Season 4 E1 on Midnight Anime!"
+    // The rich metadata layout string you wanted
     const formattedShareTitle = `Check Out ${animeTitle} E${epId} on Midnight Anime!`;
 
-    // Optimize headers for social media scrapers
+    // Cache control optimization for crawlers
     res.setHeader('Cache-Control', 's-maxage=1200, stale-while-revalidate=600');
     res.setHeader('Content-Type', 'text/html');
 
-    // Return HTML with static meta tags for WhatsApp
+    // Deliver raw HTML head tags directly to WhatsApp scraper
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
